@@ -1,0 +1,66 @@
+@startuml component_diagram
+skinparam backgroundColor white
+skinparam componentBorderColor #333
+skinparam componentBackgroundColor #FAFAFA
+skinparam packageBorderColor #666
+skinparam arrowColor #333
+skinparam shadowing false
+title CLI Task Manager — Component Diagram
+
+package "CLI Interface" {
+  [CLI Parser\n(argparse)] as CLI
+}
+
+package "Task Management Core" {
+  [TaskModel] as TM
+  [TaskService] as TS
+}
+
+package "Design Patterns Layer" {
+  [TaskBuilder\n(Builder)] as TB
+  [SortStrategy\n(Strategy)] as SS
+  [TaskObserver\n(Observer)] as TO
+}
+
+package "Data Access Layer" {
+  [TaskRepository\n(Abstract Interface)] as TR
+}
+
+package "Storage Backends" {
+  [JSON File\nStorage] as JS
+  [SQLite\nStorage] as SQ
+}
+
+package "Audit & Logging" {
+  [ConsoleLogger] as CL
+  [FileAuditLog\naudit.log] as FL
+  [HighPriorityAlert] as HA
+}
+
+CLI --> TB       : builds tasks via
+CLI --> TM       : calls add / complete / delete / list
+CLI --> TS       : or delegates through TaskService
+
+TS --> TR        : reads & writes via
+TM --> TR        : reads & writes via
+TM --> TO        : notifies observers
+TM --> SS        : sorts via
+
+TR --> JS        : implements
+TR --> SQ        : implements
+
+TO --> CL        : implements
+TO --> FL        : implements
+TO --> HA        : implements
+
+legend right
+  --> data / control flow
+  Arrows show which component
+  calls or depends on which.
+  All dependencies on the Data
+  Access Layer go through the
+  abstract TaskRepository —
+  never directly to a backend.
+endlegend
+
+@enduml

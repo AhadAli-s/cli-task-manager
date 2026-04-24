@@ -1,0 +1,140 @@
+@startuml class_diagram
+skinparam classAttributeIconSize 0
+skinparam backgroundColor white
+skinparam classBorderColor #333
+skinparam arrowColor #333
+skinparam classBackgroundColor #FAFAFA
+skinparam shadowing false
+title CLI Task Manager — Class Diagram
+
+' ─── Task & Builder ───────────────────────────────────────────
+class Task {
+  + title: str
+  + priority: str
+  + due_date: str | None
+  + tags: list[str]
+  + status: str
+  + __repr__(): str
+}
+
+class TaskBuilder {
+  - _title: str
+  - _priority: str
+  - _due_date: str | None
+  - _tags: list[str]
+  - _status: str
+  + set_title(title): TaskBuilder
+  + set_priority(priority): TaskBuilder
+  + set_due_date(due_date): TaskBuilder
+  + set_tags(tags): TaskBuilder
+  + set_status(status): TaskBuilder
+  + build(): Task
+}
+
+TaskBuilder ..> Task : creates
+
+' ─── Repository ───────────────────────────────────────────────
+abstract class TaskRepository {
+  + {abstract} save(task): None
+  + {abstract} find_by_id(task_id): dict
+  + {abstract} find_all(): list[dict]
+  + {abstract} delete(task_id): None
+  + {abstract} update(task): None
+}
+
+class JSONTaskRepository {
+  - _path: str
+  + save(task): None
+  + find_by_id(task_id): dict
+  + find_all(): list[dict]
+  + delete(task_id): None
+  + update(task): None
+}
+
+class SQLiteTaskRepository {
+  - _db: str
+  + save(task): None
+  + find_by_id(task_id): dict
+  + find_all(): list[dict]
+  + delete(task_id): None
+  + update(task): None
+}
+
+TaskRepository <|-- JSONTaskRepository
+TaskRepository <|-- SQLiteTaskRepository
+
+' ─── TaskService ──────────────────────────────────────────────
+class TaskService {
+  - _repo: TaskRepository
+  + __init__(repo: TaskRepository)
+  + add_task(title, priority, due_date): dict
+  + complete_task(task_id): dict
+  + delete_task(task_id): None
+  + list_all_tasks(): list[dict]
+}
+
+TaskService ..> TaskRepository : depends on
+
+' ─── Observer ─────────────────────────────────────────────────
+abstract class TaskObserver {
+  + {abstract} on_task_event(event_type, task): None
+}
+
+class ConsoleLogger {
+  + on_task_event(event_type, task): None
+}
+
+class FileAuditLog {
+  - _log_path: str
+  + on_task_event(event_type, task): None
+}
+
+class HighPriorityAlert {
+  + on_task_event(event_type, task): None
+}
+
+TaskObserver <|-- ConsoleLogger
+TaskObserver <|-- FileAuditLog
+TaskObserver <|-- HighPriorityAlert
+
+' ─── TaskModel ────────────────────────────────────────────────
+class TaskModel {
+  - _tasks: list[dict]
+  - _observers: list[TaskObserver]
+  - _sort_strategy: SortStrategy
+  + subscribe(observer): None
+  + unsubscribe(observer): None
+  - _notify(event_type, task): None
+  + set_sort_strategy(strategy): None
+  + add_task(title, priority, due_date): dict
+  + complete_task(task_id): dict
+  + delete_task(task_id): None
+  + list_tasks(): list[dict]
+}
+
+TaskModel "1" *-- "0..*" TaskObserver : notifies >
+TaskModel ..> SortStrategy : delegates sorting >
+
+' ─── Strategy ─────────────────────────────────────────────────
+abstract class SortStrategy {
+  + {abstract} sort(tasks): list[dict]
+}
+
+class SortByPriority {
+  + sort(tasks): list[dict]
+}
+
+class SortByDueDate {
+  + sort(tasks): list[dict]
+}
+
+class SortByTitle {
+  + sort(tasks): list[dict]
+}
+
+
+SortStrategy <|-- SortByPriority
+SortStrategy <|-- SortByDueDate
+SortStrategy <|-- SortByTitle
+
+@enduml

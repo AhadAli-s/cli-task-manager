@@ -1,0 +1,69 @@
+@startuml sequence_diagram
+skinparam backgroundColor white
+skinparam sequenceArrowColor #333
+skinparam sequenceLifeLineBorderColor #333
+skinparam sequenceParticipantBorderColor #333
+skinparam sequenceParticipantBackgroundColor #FAFAFA
+skinparam shadowing false
+title Add High Priority Task — Sequence Diagram\nadd-task "Fix login bug" --priority HIGH
+
+actor User
+participant CLI
+participant TaskBuilder
+participant TaskModel
+participant SQLiteTaskRepository as Repo
+participant ConsoleLogger
+participant HighPriorityAlert
+participant FileAuditLog
+
+User -> CLI : add-task "Fix login bug" --priority HIGH
+activate CLI
+
+CLI -> TaskBuilder : set_title("Fix login bug")\n.set_priority("HIGH")\n.set_due_date(...)\n.build()
+activate TaskBuilder
+TaskBuilder --> CLI : task: Task
+deactivate TaskBuilder
+
+CLI -> TaskModel : add_task(title, priority, due_date)
+activate TaskModel
+
+TaskModel -> Repo : save(task)
+activate Repo
+Repo --> TaskModel : None
+deactivate Repo
+
+note right of TaskModel
+  _notify() is called after save().
+  TaskModel has no knowledge of
+  what observers do — they are
+  fully decoupled via the
+  TaskObserver interface.
+  Adding new observers requires
+  zero changes to TaskModel (OCP).
+end note
+
+TaskModel -> TaskModel : _notify("task_created", task)
+
+TaskModel -> ConsoleLogger : on_task_event("task_created", task)
+activate ConsoleLogger
+ConsoleLogger --> TaskModel : None
+deactivate ConsoleLogger
+
+TaskModel -> HighPriorityAlert : on_task_event("task_created", task)
+activate HighPriorityAlert
+note right : Reacts — priority == "HIGH"
+HighPriorityAlert --> TaskModel : None
+deactivate HighPriorityAlert
+
+TaskModel -> FileAuditLog : on_task_event("task_created", task)
+activate FileAuditLog
+FileAuditLog --> TaskModel : None
+deactivate FileAuditLog
+
+TaskModel --> CLI : task dict
+deactivate TaskModel
+
+CLI --> User : "Task created: Fix login bug [HIGH]"
+deactivate CLI
+
+@enduml
