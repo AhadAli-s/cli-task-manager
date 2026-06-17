@@ -1,0 +1,6 @@
+*.db
+*.json
+audit.log
+__pycache__/
+*.pyc
+.venv/
